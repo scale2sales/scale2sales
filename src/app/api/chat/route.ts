@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     .eq('id', organizationId)
     .single()
 
-  const isActive = org?.subscription_plan === 'free' || isSubscriptionActive(org?.subscription_status ?? null)
+  const isActive = (org as any)?.subscription_plan === 'free' || isSubscriptionActive(org?.subscription_status ?? null)
   if (!isActive) {
     return NextResponse.json({ error: 'Subscription inactive. Please upgrade.' }, { status: 402 })
   }
