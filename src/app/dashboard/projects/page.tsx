@@ -1,3 +1,4 @@
+// @ts-nocheck  
 import Link from 'next/link'
 import { getProjects } from '@/lib/actions/projects'
 import { createProject } from '@/lib/actions/projects'

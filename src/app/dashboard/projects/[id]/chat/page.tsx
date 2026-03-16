@@ -1,3 +1,4 @@
+// @ts-nocheck  
 // @ts-nocheck
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'

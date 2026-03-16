@@ -1,3 +1,4 @@
+// @ts-nocheck  
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
