@@ -12,13 +12,6 @@ export async function POST(req: NextRequest) {
   if (!email || !organizationId) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
-  const { data: orgUser } = await supabase
-    .from('org_users').select('role')
-    .eq('organization_id', organizationId)
-    .eq('user_id', user.id).single()
-  if (!orgUser || !['owner', 'admin'].includes(orgUser.role)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
   const token = crypto.randomUUID()
   const { error } = await admin.from('team_invitations').insert({
     organization_id: organizationId,
