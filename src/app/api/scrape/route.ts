@@ -4,21 +4,16 @@ import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 30
+export const maxDuration = 60
 
-async function fetchPageText(url: string): Promise<string> {
+async function fetchPageText(url: string): Promise<{ text: string; links: string[] }> {
   const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; Scale2Sales-Bot/1.0)',
-    },
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Scale2Sales-Bot/1.0)' },
     signal: AbortSignal.timeout(10000),
   })
-
-  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`)
-
+  if (!res.ok) throw new Error(`${res.status}`)
   const html = await res.text()
 
-  // Strip scripts, styles, nav, footer
   const cleaned = html
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -28,30 +23,43 @@ async function fetchPageText(url: string): Promise<string> {
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+    .slice(0, 3000)
 
-  return cleaned.slice(0, 5000)
-}
-
-function extractLinks(html: string, baseUrl: string): string[] {
-  const urls: string[] = []
-  const base = new URL(baseUrl)
-  const matches = html.matchAll(/href=["']([^"']+)["']/gi)
-
+  // Extract links
+  const links: string[] = []
+  const base = new URL(url)
+  const matches = html.matchAll(/href=["']([^"'#?]+)["']/gi)
   for (const match of matches) {
     try {
-      const url = new URL(match[1], baseUrl)
+      const u = new URL(match[1], url)
       if (
-        url.hostname === base.hostname &&
-        !url.pathname.match(/\.(pdf|jpg|jpeg|png|gif|svg|css|js|zip)$/i) &&
-        !urls.includes(url.href) &&
-        urls.length < 5
+        u.hostname === base.hostname &&
+        u.pathname !== '/' &&
+        !u.pathname.match(/\.(pdf|jpg|jpeg|png|gif|svg|css|js|zip|xml|ico)$/i) &&
+        !links.includes(u.href)
       ) {
-        urls.push(url.href)
+        links.push(u.href)
       }
     } catch {}
   }
 
-  return urls
+  return { text: cleaned, links }
+}
+
+// Priority scoring for pages
+function scorePage(url: string): number {
+  const path = url.toLowerCase()
+  if (/\/(about|about-us|our-story)/.test(path)) return 10
+  if (/\/(contact|contact-us|reach-us)/.test(path)) return 10
+  if (/\/(service|services|what-we-do|solutions)/.test(path)) return 9
+  if (/\/(product|products|shop|store|catalog)/.test(path)) return 9
+  if (/\/(pricing|price|prices|plans|packages)/.test(path)) return 9
+  if (/\/(faq|faqs|frequently-asked|help|support)/.test(path)) return 8
+  if (/\/(menu|food|drink)/.test(path)) return 8
+  if (/\/(hours|location|locations|find-us)/.test(path)) return 7
+  if (/\/(team|staff|people|leadership)/.test(path)) return 6
+  if (/\/(blog|news|articles|posts)/.test(path)) return 2
+  return 3
 }
 
 export async function POST(req: NextRequest) {
@@ -59,108 +67,155 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { url, projectId } = await req.json()
-
+  const { url, projectId, maxPages = 15 } = await req.json()
   if (!url) return NextResponse.json({ error: 'URL is required' }, { status: 400 })
 
-  // Normalize URL
-  let normalizedUrl = url
-  if (!normalizedUrl.startsWith('http')) {
-    normalizedUrl = 'https://' + normalizedUrl
-  }
+  let normalizedUrl = url.trim()
+  if (!normalizedUrl.startsWith('http')) normalizedUrl = 'https://' + normalizedUrl
 
-  try {
-    // Fetch homepage HTML for link extraction
-    const homeRes = await fetch(normalizedUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Scale2Sales-Bot/1.0)' },
-      signal: AbortSignal.timeout(10000),
-    })
+  // Use streaming to send progress updates
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream({
+    async start(controller) {
+      function send(data: object) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
+      }
 
-    const homeHtml = await homeRes.text()
-    const homeText = homeHtml
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
-      .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 5000)
-
-    // Find important sub-pages to scrape
-    const subLinks = extractLinks(homeHtml, normalizedUrl)
-    const priorityPages = subLinks.filter(link =>
-      /about|contact|service|product|menu|price|faq|hours|team/i.test(link)
-    ).slice(0, 3)
-
-    // Scrape sub-pages
-    let additionalContent = ''
-    for (const link of priorityPages) {
       try {
-        const text = await fetchPageText(link)
-        additionalContent += `\n\n--- ${link} ---\n${text}`
-      } catch {}
-    }
+        send({ type: 'progress', message: 'Starting scan...', progress: 0, pagesFound: 0 })
 
-    const allContent = homeText + additionalContent
+        // Scrape homepage
+        send({ type: 'progress', message: `Scanning homepage...`, progress: 5, pagesFound: 0 })
+        const { text: homeText, links: homeLinks } = await fetchPageText(normalizedUrl)
 
-    // Generate system prompt using AI
-    const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY || '',
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1000,
-        messages: [
-          {
-            role: 'user',
-            content: `You are helping create an AI chatbot system prompt for a business website.
+        // Score and sort all found links
+        const scoredLinks = [...new Set(homeLinks)]
+          .map(link => ({ url: link, score: scorePage(link) }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, maxPages - 1)
 
-Here is the scraped content from their website:
-${allContent}
+        send({
+          type: 'progress',
+          message: `Found ${scoredLinks.length} pages to scan`,
+          progress: 10,
+          pagesFound: scoredLinks.length,
+        })
 
-Based on this content, create a helpful and accurate system prompt for an AI chatbot assistant for this business. The system prompt should:
-1. Introduce the AI as a helpful assistant for this specific business
-2. Include key facts: business name, what they offer, hours (if found), location (if found), contact info (if found)
-3. List main products/services with prices if available
-4. Include any FAQs or important policies found
-5. End with: "Always be helpful, friendly, and accurate. If you don't know something, say so and suggest they contact us directly."
+        // Scrape all pages
+        const scrapedPages: { url: string; text: string }[] = [
+          { url: normalizedUrl, text: homeText }
+        ]
 
-Keep it under 400 words. Return ONLY the system prompt text, nothing else.`,
+        for (let i = 0; i < scoredLinks.length; i++) {
+          const page = scoredLinks[i]
+          const progress = 10 + Math.round(((i + 1) / scoredLinks.length) * 70)
+
+          send({
+            type: 'progress',
+            message: `Scanning: ${new URL(page.url).pathname}`,
+            progress,
+            pagesScanned: i + 1,
+            totalPages: scoredLinks.length,
+          })
+
+          try {
+            const { text } = await fetchPageText(page.url)
+            scrapedPages.push({ url: page.url, text })
+          } catch {
+            // Skip failed pages silently
+          }
+
+          // Small delay to be respectful
+          await new Promise(r => setTimeout(r, 200))
+        }
+
+        send({
+          type: 'progress',
+          message: 'Generating AI system prompt...',
+          progress: 85,
+          pagesScanned: scrapedPages.length,
+        })
+
+        // Combine all content
+        const combinedContent = scrapedPages
+          .map(p => `--- ${p.url} ---\n${p.text}`)
+          .join('\n\n')
+          .slice(0, 15000)
+
+        // Generate system prompt with AI
+        const aiResponse = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+            'anthropic-version': '2023-06-01',
           },
-        ],
-      }),
-    })
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 1200,
+            messages: [{
+              role: 'user',
+              content: `You are creating an AI chatbot system prompt for a business website.
 
-    const aiData = await aiResponse.json()
-    const systemPrompt = aiData.content?.[0]?.text || ''
+Here is content scraped from ${scrapedPages.length} pages of their website:
 
-    if (!systemPrompt) {
-      return NextResponse.json({ error: 'Could not generate system prompt' }, { status: 500 })
-    }
+${combinedContent}
 
-    // Update project with new system prompt if projectId provided
-    if (projectId) {
-      await supabase
-        .from('projects')
-        .update({ system_prompt: systemPrompt })
-        .eq('id', projectId)
-    }
+Create a comprehensive system prompt for an AI assistant for this business. Include:
+1. Business name and what they do
+2. All products/services with prices if found
+3. Hours of operation if found
+4. Location and contact info if found
+5. Key FAQs or policies found
+6. Tone and personality guidelines
+7. What to do if asked something you don't know
 
-    return NextResponse.json({
-      success: true,
-      systemPrompt,
-      pagesScraped: 1 + priorityPages.length,
-    })
-  } catch (err: any) {
-    console.error('Scraping error:', err)
-    return NextResponse.json(
-      { error: `Failed to scrape website: ${err.message}` },
-      { status: 500 }
-    )
-  }
+End with: "Always be helpful, friendly, and accurate. If you don't know something specific, suggest the customer contact us directly."
+
+Return ONLY the system prompt, no other text. Keep under 600 words.`,
+            }],
+          }),
+        })
+
+        const aiData = await aiResponse.json()
+        const systemPrompt = aiData.content?.[0]?.text || ''
+
+        if (!systemPrompt) {
+          send({ type: 'error', message: 'Could not generate system prompt. Check your Anthropic API key.' })
+          controller.close()
+          return
+        }
+
+        // Save to project if provided
+        if (projectId) {
+          await supabase
+            .from('projects')
+            .update({ system_prompt: systemPrompt })
+            .eq('id', projectId)
+        }
+
+        send({
+          type: 'complete',
+          message: `✅ Done! Scanned ${scrapedPages.length} pages`,
+          progress: 100,
+          pagesScanned: scrapedPages.length,
+          systemPrompt,
+          pagesList: scrapedPages.map(p => new URL(p.url).pathname),
+        })
+
+        controller.close()
+      } catch (err: any) {
+        send({ type: 'error', message: `Failed to scan: ${err.message}` })
+        controller.close()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  })
 }
