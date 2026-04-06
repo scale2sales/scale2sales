@@ -1,14 +1,12 @@
-// @ts-nocheck  
 'use client'
-
+// @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { cn } from '@/lib/utils'
-import type { Message, Project, Conversation } from '@/types/database'
 
 interface ChatInterfaceProps {
-  project: Project
-  initialConversation: Conversation | null
-  initialMessages: Message[]
+  project: any
+  initialConversation: any
+  initialMessages: any[]
   organizationId: string
 }
 
@@ -19,20 +17,29 @@ interface ChatMessage {
   isStreaming?: boolean
 }
 
-export function ChatInterface({
-  project,
-  initialConversation,
-  initialMessages,
-  organizationId,
-}: ChatInterfaceProps) {
+function renderMarkdown(text: string): string {
+  if (!text) return ''
+  return text
+    .replace(/^### (.+)$/gm, '<h3 style="font-size:13px;font-weight:600;margin:10px 0 4px;color:#111">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 style="font-size:14px;font-weight:700;margin:12px 0 4px;color:#111">$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1 style="font-size:15px;font-weight:700;margin:12px 0 4px;color:#111">$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code style="background:#f0f0f0;padding:1px 5px;border-radius:3px;font-size:12px">$1</code>')
+    .replace(/^\s*[-•]\s+(.+)$/gm, '<li style="margin:3px 0;padding-left:4px">$1</li>')
+    .replace(/(<li[^>]*>.*<\/li>\n?)+/gs, '<ul style="margin:6px 0;padding-left:16px;list-style:disc">$&</ul>')
+    .replace(/^\d+\.\s+(.+)$/gm, '<li style="margin:3px 0;padding-left:4px">$1</li>')
+    .replace(/\n\n/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>')
+}
+
+export function ChatInterface({ project, initialConversation, initialMessages, organizationId }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>(
-    initialMessages.map((m) => ({ id: m.id, role: m.role as 'user' | 'assistant', content: m.content }))
+    initialMessages.map((m) => ({ id: m.id, role: m.role, content: m.content }))
   )
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [conversationId, setConversationId] = useState<string | null>(
-    initialConversation?.id ?? null
-  )
+  const [conversationId, setConversationId] = useState(initialConversation?.id ?? null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -51,48 +58,27 @@ export function ChatInterface({
     const text = input.trim()
     if (!text || isLoading) return
 
-    const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: text,
-    }
-
+    const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: text }
     setMessages((prev) => [...prev, userMsg])
     setInput('')
     setIsLoading(true)
-
-    // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-    }
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
     const assistantMsgId = crypto.randomUUID()
-    setMessages((prev) => [
-      ...prev,
-      { id: assistantMsgId, role: 'assistant', content: '', isStreaming: true },
-    ])
+    setMessages((prev) => [...prev, { id: assistantMsgId, role: 'assistant', content: '', isStreaming: true }])
 
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          projectId: project.id,
-          conversationId,
-          organizationId,
-        }),
+        body: JSON.stringify({ message: text, projectId: project.id, conversationId, organizationId }),
       })
 
-      if (!response.ok) {
-        throw new Error(await response.text())
-      }
+      if (!response.ok) throw new Error(await response.text())
 
-      // Handle conversation ID from header
       const newConvId = response.headers.get('X-Conversation-Id')
       if (newConvId) setConversationId(newConvId)
 
-      // Stream response
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
       let accumulated = ''
@@ -101,10 +87,7 @@ export function ChatInterface({
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
-
-          const chunk = decoder.decode(value, { stream: true })
-          const lines = chunk.split('\n')
-
+          const lines = decoder.decode(value, { stream: true }).split('\n')
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const data = line.slice(6)
@@ -114,33 +97,18 @@ export function ChatInterface({
                 if (parsed.delta) {
                   accumulated += parsed.delta
                   setMessages((prev) =>
-                    prev.map((m) =>
-                      m.id === assistantMsgId
-                        ? { ...m, content: accumulated }
-                        : m
-                    )
+                    prev.map((m) => m.id === assistantMsgId ? { ...m, content: accumulated } : m)
                   )
                 }
-              } catch {
-                // ignore parse errors in stream
-              }
+              } catch {}
             }
           }
         }
       }
-
+      setMessages((prev) => prev.map((m) => m.id === assistantMsgId ? { ...m, isStreaming: false } : m))
+    } catch {
       setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantMsgId ? { ...m, isStreaming: false } : m
-        )
-      )
-    } catch (err) {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantMsgId
-            ? { ...m, content: 'An error occurred. Please try again.', isStreaming: false }
-            : m
-        )
+        prev.map((m) => m.id === assistantMsgId ? { ...m, content: 'An error occurred. Please try again.', isStreaming: false } : m)
       )
     } finally {
       setIsLoading(false)
@@ -148,10 +116,7 @@ export function ChatInterface({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
   }
 
   return (
@@ -160,8 +125,7 @@ export function ChatInterface({
       <div className="flex items-center gap-3 px-6 py-4 bg-white border-b border-gray-200">
         <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center">
           <svg className="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
           </svg>
         </div>
         <div>
@@ -169,7 +133,7 @@ export function ChatInterface({
           <p className="text-xs text-gray-500">AI Playground</p>
         </div>
         <div className="ml-auto flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"/>
           <span className="text-xs text-gray-500">Online</span>
         </div>
       </div>
@@ -180,8 +144,7 @@ export function ChatInterface({
           <div className="flex flex-col items-center justify-center h-full text-center py-16">
             <div className="w-16 h-16 rounded-2xl bg-brand-100 flex items-center justify-center mb-4">
               <svg className="w-8 h-8 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
               </svg>
             </div>
             <p className="text-gray-900 font-semibold text-lg">Start a conversation</p>
@@ -190,12 +153,8 @@ export function ChatInterface({
             </p>
           </div>
         )}
-
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
-        ))}
-
-        <div ref={bottomRef} />
+        {messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)}
+        <div ref={bottomRef}/>
       </div>
 
       {/* Input */}
@@ -205,10 +164,7 @@ export function ChatInterface({
             ref={textareaRef}
             rows={1}
             value={input}
-            onChange={(e) => {
-              setInput(e.target.value)
-              autoResize()
-            }}
+            onChange={(e) => { setInput(e.target.value); autoResize() }}
             onKeyDown={handleKeyDown}
             placeholder="Type a message… (Enter to send, Shift+Enter for newline)"
             className="flex-1 bg-transparent text-sm text-gray-900 placeholder:text-gray-400 resize-none focus:outline-none min-h-[24px]"
@@ -219,26 +175,22 @@ export function ChatInterface({
             disabled={!input.trim() || isLoading}
             className={cn(
               'flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-colors',
-              input.trim() && !isLoading
-                ? 'bg-brand-600 text-white hover:bg-brand-700'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              input.trim() && !isLoading ? 'bg-brand-600 text-white hover:bg-brand-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             )}
           >
             {isLoading ? (
               <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
               </svg>
             ) : (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
               </svg>
             )}
           </button>
         </div>
-        <p className="text-center text-xs text-gray-400 mt-2">
-          AI can make mistakes. Verify important information.
-        </p>
+        <p className="text-center text-xs text-gray-400 mt-2">AI can make mistakes. Verify important information.</p>
       </div>
     </div>
   )
@@ -252,27 +204,33 @@ function MessageBubble({ message }: { message: ChatMessage }) {
       {!isUser && (
         <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center flex-shrink-0">
           <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
           </svg>
         </div>
       )}
-      <div
-        className={cn(
-          'max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
-          isUser
-            ? 'bg-brand-600 text-white rounded-br-sm'
-            : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-bl-sm'
-        )}
-      >
-        {message.content || (
+      <div className={cn(
+        'max-w-[78%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
+        isUser
+          ? 'bg-brand-600 text-white rounded-br-sm'
+          : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-bl-sm'
+      )}>
+        {isUser ? (
+          <span>{message.content}</span>
+        ) : message.content ? (
+          <div
+            className="prose-sm"
+            dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
+            style={{ fontSize: '13px', lineHeight: '1.6' }}
+          />
+        ) : (
           <span className="flex gap-1 items-center h-5">
-            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }}/>
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }}/>
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }}/>
           </span>
         )}
         {message.isStreaming && message.content && (
-          <span className="inline-block w-0.5 h-4 bg-gray-500 ml-0.5 animate-pulse align-middle" />
+          <span className="inline-block w-0.5 h-4 bg-gray-500 ml-0.5 animate-pulse align-middle"/>
         )}
       </div>
     </div>

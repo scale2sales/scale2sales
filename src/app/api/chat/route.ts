@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
         const anthropicStream = anthropic.messages.stream({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 1024,
-          system: project?.system_prompt ?? 'You are a helpful assistant.',
+          system: (project?.system_prompt ?? 'You are a helpful assistant.') + '\n\nFormatting rules: Use ## for section headers, **bold** for important terms, and bullet points (-) for lists. Keep responses concise and well-structured. Never write walls of text.',
           messages: [{ role: 'user', content: message }],
         })
 
