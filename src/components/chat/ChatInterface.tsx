@@ -3,13 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { cn } from '@/lib/utils'
 
-interface ChatInterfaceProps {
-  project: any
-  initialConversation: any
-  initialMessages: any[]
-  organizationId: string
-}
-
 interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
@@ -20,22 +13,21 @@ interface ChatMessage {
 function renderMarkdown(text: string): string {
   if (!text) return ''
   return text
-    .replace(/^### (.+)$/gm, '<h3 style="font-size:13px;font-weight:600;margin:10px 0 4px;color:#111">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 style="font-size:14px;font-weight:700;margin:12px 0 4px;color:#111">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 style="font-size:15px;font-weight:700;margin:12px 0 4px;color:#111">$1</h1>')
+    .replace(/^### (.+)$/gm, '<h3 style="font-size:12px;font-weight:600;margin:8px 0 2px;color:#111">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 style="font-size:13px;font-weight:700;margin:10px 0 3px;color:#111">$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1 style="font-size:14px;font-weight:700;margin:10px 0 3px;color:#111">$1</h1>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code style="background:#f0f0f0;padding:1px 5px;border-radius:3px;font-size:12px">$1</code>')
-    .replace(/^\s*[-•]\s+(.+)$/gm, '<li style="margin:3px 0;padding-left:4px">$1</li>')
-    .replace(/(<li[^>]*>[\s\S]*?<\/li>\n?)+/gm, '<ul style="margin:6px 0;padding-left:16px;list-style:disc">$&</ul>')
-    .replace(/^\d+\.\s+(.+)$/gm, '<li style="margin:3px 0;padding-left:4px">$1</li>')
-    .replace(/\n\n/g, '<br/><br/>')
-    .replace(/\n/g, '<br/>')
+    .replace(/`(.+?)`/g, '<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;font-size:11px">$1</code>')
+    .replace(/^\s*[-•]\s+(.+)$/gm, '<li>$1</li>')
+    .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
+    .replace(/\n\n/g, '<br/>')
+    .replace(/\n/g, ' ')
 }
 
-export function ChatInterface({ project, initialConversation, initialMessages, organizationId }: ChatInterfaceProps) {
+export function ChatInterface({ project, initialConversation, initialMessages, organizationId }: any) {
   const [messages, setMessages] = useState<ChatMessage[]>(
-    initialMessages.map((m) => ({ id: m.id, role: m.role, content: m.content }))
+    initialMessages.map((m: any) => ({ id: m.id, role: m.role, content: m.content }))
   )
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -57,32 +49,25 @@ export function ChatInterface({ project, initialConversation, initialMessages, o
   const sendMessage = async () => {
     const text = input.trim()
     if (!text || isLoading) return
-
     const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: text }
     setMessages((prev) => [...prev, userMsg])
     setInput('')
     setIsLoading(true)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
-
     const assistantMsgId = crypto.randomUUID()
     setMessages((prev) => [...prev, { id: assistantMsgId, role: 'assistant', content: '', isStreaming: true }])
-
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, projectId: project.id, conversationId, organizationId }),
       })
-
       if (!response.ok) throw new Error(await response.text())
-
       const newConvId = response.headers.get('X-Conversation-Id')
       if (newConvId) setConversationId(newConvId)
-
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
       let accumulated = ''
-
       if (reader) {
         while (true) {
           const { done, value } = await reader.read()
@@ -96,9 +81,7 @@ export function ChatInterface({ project, initialConversation, initialMessages, o
                 const parsed = JSON.parse(data)
                 if (parsed.delta) {
                   accumulated += parsed.delta
-                  setMessages((prev) =>
-                    prev.map((m) => m.id === assistantMsgId ? { ...m, content: accumulated } : m)
-                  )
+                  setMessages((prev) => prev.map((m) => m.id === assistantMsgId ? { ...m, content: accumulated } : m))
                 }
               } catch {}
             }
@@ -107,9 +90,7 @@ export function ChatInterface({ project, initialConversation, initialMessages, o
       }
       setMessages((prev) => prev.map((m) => m.id === assistantMsgId ? { ...m, isStreaming: false } : m))
     } catch {
-      setMessages((prev) =>
-        prev.map((m) => m.id === assistantMsgId ? { ...m, content: 'An error occurred. Please try again.', isStreaming: false } : m)
-      )
+      setMessages((prev) => prev.map((m) => m.id === assistantMsgId ? { ...m, content: 'An error occurred. Please try again.', isStreaming: false } : m))
     } finally {
       setIsLoading(false)
     }
@@ -121,7 +102,6 @@ export function ChatInterface({ project, initialConversation, initialMessages, o
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Header */}
       <div className="flex items-center gap-3 px-6 py-4 bg-white border-b border-gray-200">
         <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center">
           <svg className="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,8 +118,7 @@ export function ChatInterface({ project, initialConversation, initialMessages, o
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-3">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center py-16">
             <div className="w-16 h-16 rounded-2xl bg-brand-100 flex items-center justify-center mb-4">
@@ -148,16 +127,13 @@ export function ChatInterface({ project, initialConversation, initialMessages, o
               </svg>
             </div>
             <p className="text-gray-900 font-semibold text-lg">Start a conversation</p>
-            <p className="text-gray-500 text-sm mt-1 max-w-sm">
-              Send a message to test your AI chatbot for <strong>{project.name}</strong>
-            </p>
+            <p className="text-gray-500 text-sm mt-1 max-w-sm">Send a message to test your AI chatbot for <strong>{project.name}</strong></p>
           </div>
         )}
         {messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)}
         <div ref={bottomRef}/>
       </div>
 
-      {/* Input */}
       <div className="px-4 py-4 bg-white border-t border-gray-200">
         <div className="flex items-end gap-3 bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 focus-within:border-brand-400 focus-within:ring-2 focus-within:ring-brand-100 transition-all">
           <textarea
@@ -198,7 +174,6 @@ export function ChatInterface({ project, initialConversation, initialMessages, o
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user'
-
   return (
     <div className={cn('flex items-end gap-2', isUser ? 'justify-end' : 'justify-start')}>
       {!isUser && (
@@ -209,19 +184,25 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         </div>
       )}
       <div className={cn(
-        'max-w-[78%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
-        isUser
-          ? 'bg-brand-600 text-white rounded-br-sm'
-          : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-bl-sm'
+        'max-w-[78%] rounded-2xl px-4 py-2.5 text-sm',
+        isUser ? 'bg-brand-600 text-white rounded-br-sm' : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-bl-sm'
       )}>
         {isUser ? (
-          <span>{message.content}</span>
+          <span style={{ lineHeight: '1.5' }}>{message.content}</span>
         ) : message.content ? (
-          <div
-            className="prose-sm"
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
-            style={{ fontSize: '13px', lineHeight: '1.6' }}
-          />
+          <div style={{ fontSize: '13px', lineHeight: '1.5' }}>
+            <style>{`
+              .ai-msg ul { margin: 4px 0; padding-left: 16px; list-style: disc; }
+              .ai-msg li { margin: 2px 0; }
+              .ai-msg h1, .ai-msg h2, .ai-msg h3 { margin: 6px 0 2px; }
+              .ai-msg strong { font-weight: 600; }
+              .ai-msg br { display: block; content: ""; margin: 2px 0; }
+            `}</style>
+            <div
+              className="ai-msg"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
+            />
+          </div>
         ) : (
           <span className="flex gap-1 items-center h-5">
             <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }}/>
@@ -230,7 +211,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           </span>
         )}
         {message.isStreaming && message.content && (
-          <span className="inline-block w-0.5 h-4 bg-gray-500 ml-0.5 animate-pulse align-middle"/>
+          <span className="inline-block w-0.5 h-3 bg-gray-400 ml-0.5 animate-pulse align-middle"/>
         )}
       </div>
     </div>
