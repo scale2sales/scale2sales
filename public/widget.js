@@ -5,6 +5,8 @@
   const position = config.position || 'bottom-right';
   const primaryColor = config.primaryColor || '#6366f1';
   const greeting = config.greeting || 'Hi! How can I help you today?';
+  const widgetName = config.widgetName || 'AI Assistant';
+  const widgetSubtitle = config.widgetSubtitle || 'Online · replies instantly';
 
   if (!projectId) { console.warn('Scale2Sales: projectId is required'); return; }
 
@@ -63,7 +65,7 @@
   chatBox.innerHTML = `
     <div id="s2s-chat-header">
       <div class="avatar"><svg width="20" height="20" fill="none" stroke="${primaryColor}" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg></div>
-      <div><h3>AI Assistant</h3><p>&#9679; Online · replies instantly</p></div>
+      <div><h3>${widgetName}</h3><p>&#9679; ${widgetSubtitle}</p></div>
     </div>
     <div id="s2s-messages"></div>
     <div id="s2s-input-area">
