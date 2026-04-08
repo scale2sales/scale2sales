@@ -10,7 +10,7 @@ function renderMarkdown(text: string): string {
     .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#111">$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/^\s*[-•]\s+(.+)$/gm, '<li style="margin:3px 0;color:#374151">$1</li>')
-    .replace(/(<li[^>]*>.*?<\/li>\s*)+/gs, (m) => `<ul style="margin:6px 0;padding-left:16px;list-style:disc">${m}</ul>`)
+    .replace(/(<li[^>]*>.*?<\/li>\s*)+/gm, (m) => `<ul style="margin:6px 0;padding-left:16px;list-style:disc">${m}</ul>`)
     .replace(/^\d+\.\s+(.+)$/gm, '<li style="margin:3px 0">$1</li>')
     .replace(/\n\n/g, '<br/><br/>')
     .replace(/\n/g, '<br/>')
