@@ -17,7 +17,7 @@ function renderMarkdown(text: string): string {
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/^\s*[-•]\s+(.+)$/gm, '<li style="margin:1px 0">$1</li>')
-    .replace(/(<li[^>]*>.*?<\/li>\s*)+/gs, (m) => `<ul style="margin:4px 0;padding-left:14px;list-style:disc">${m}</ul>`)
+    .replace(/(<li[^>]*>.*?<\/li>\s*)+/gm, (m) => `<ul style="margin:4px 0;padding-left:14px;list-style:disc">${m}</ul>`)
     .replace(/\n\n/g, '<br/>')
     .replace(/\n/g, ' ')
 }
