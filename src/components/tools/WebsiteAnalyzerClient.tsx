@@ -2,7 +2,7 @@
 // @ts-nocheck
 import { useState } from 'react'
 
-function renderMarkdown(text: string): string {
+function renderMarkdown(text) {
   if (!text) return ''
   return text
     .replace(/^## (.+)$/gm, '<h2 style="font-size:16px;font-weight:700;margin:16px 0 6px;color:#111;border-bottom:1px solid #f0f0f0;padding-bottom:6px">$1</h2>')
@@ -10,7 +10,7 @@ function renderMarkdown(text: string): string {
     .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#111">$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/^\s*[-•]\s+(.+)$/gm, '<li style="margin:3px 0;color:#374151">$1</li>')
-    .replace(/(<li[^>]*>.*?<\/li>\s*)+/gm, (m) => `<ul style="margin:6px 0;padding-left:16px;list-style:disc">${m}</ul>`)
+    .replace(/(<li[^>]*>[\s\S]+?<\/li>\s*)+/gm, (m) => `<ul style="margin:6px 0;padding-left:16px;list-style:disc">${m}</ul>`)
     .replace(/^\d+\.\s+(.+)$/gm, '<li style="margin:3px 0">$1</li>')
     .replace(/\n\n/g, '<br/><br/>')
     .replace(/\n/g, '<br/>')
@@ -28,7 +28,7 @@ export function WebsiteAnalyzerClient() {
   const [scanProgress, setScanProgress] = useState(0)
   const [scanMessage, setScanMessage] = useState('')
   const [scanError, setScanError] = useState('')
-  const [analysis, setAnalysis] = useState<any>(null)
+  const [analysis, setAnalysis] = useState(null)
   const [pagesScanned, setPagesScanned] = useState(0)
 
   async function handleAnalyze() {
@@ -43,16 +43,17 @@ export function WebsiteAnalyzerClient() {
     if (!normalizedUrl.startsWith('http')) normalizedUrl = 'https://' + normalizedUrl
 
     try {
-      // First scrape the website
-      const res = await fetch('/api/scrape', {
+      // Use the new tools-specific scrape endpoint (no auth needed)
+      const res = await fetch('/api/tools/scrape', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: normalizedUrl, maxPages: 10 }),
+        body: JSON.stringify({ url: normalizedUrl }),
       })
 
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let scrapedContent = ''
+      let scrapedPages = 0
 
       while (true) {
         const { done, value } = await reader.read()
@@ -69,6 +70,7 @@ export function WebsiteAnalyzerClient() {
               }
               if (data.type === 'complete') {
                 scrapedContent = data.systemPrompt
+                scrapedPages = data.pagesScanned
                 setPagesScanned(data.pagesScanned)
               }
               if (data.type === 'error') {
@@ -81,6 +83,12 @@ export function WebsiteAnalyzerClient() {
         }
       }
 
+      if (!scrapedContent) {
+        setScanError('Could not read website content. Please check the URL.')
+        setScanning(false)
+        return
+      }
+
       // Now analyze with AI
       setScanMessage('Generating AI analysis...')
       setScanProgress(80)
@@ -88,7 +96,7 @@ export function WebsiteAnalyzerClient() {
       const aiRes = await fetch('/api/tools/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: normalizedUrl, content: scrapedContent, pagesScanned }),
+        body: JSON.stringify({ url: normalizedUrl, content: scrapedContent, pagesScanned: scrapedPages }),
       })
 
       const aiData = await aiRes.json()
@@ -110,11 +118,8 @@ export function WebsiteAnalyzerClient() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      {/* URL Input */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6 shadow-sm">
-        <label className="block text-sm font-semibold text-gray-700 mb-3">
-          Enter your website URL
-        </label>
+        <label className="block text-sm font-semibold text-gray-700 mb-3">Enter your website URL</label>
         <div className="flex gap-3">
           <input
             type="text"
@@ -142,7 +147,6 @@ export function WebsiteAnalyzerClient() {
           </button>
         </div>
 
-        {/* Progress */}
         {scanning && (
           <div className="mt-4 space-y-2">
             <div className="flex justify-between text-xs text-gray-500">
@@ -150,10 +154,7 @@ export function WebsiteAnalyzerClient() {
               <span>{Math.round(scanProgress)}%</span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-2">
-              <div
-                className="bg-brand-500 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${scanProgress}%` }}
-              />
+              <div className="bg-brand-500 h-2 rounded-full transition-all duration-500" style={{ width: `${scanProgress}%` }}/>
             </div>
           </div>
         )}
@@ -163,12 +164,10 @@ export function WebsiteAnalyzerClient() {
         )}
       </div>
 
-      {/* Analysis Results */}
       {analysis && (
         <div className="space-y-5">
-          {/* Score cards */}
           <div className="grid grid-cols-3 gap-4">
-            {analysis.scores?.map((score: any) => {
+            {analysis.scores?.map((score) => {
               const level = score.value >= 70 ? 'high' : score.value >= 40 ? 'medium' : 'low'
               const colors = SCORE_COLORS[level]
               return (
@@ -178,13 +177,11 @@ export function WebsiteAnalyzerClient() {
                   <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
                     <div className={`${colors.bar} h-1.5 rounded-full`} style={{ width: `${score.value}%` }}/>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">{score.label === 'Overall Score' ? (level === 'high' ? 'Great' : level === 'medium' ? 'Good' : 'Needs work') : score.sublabel}</p>
                 </div>
               )
             })}
           </div>
 
-          {/* Full analysis */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-lg">📊</span>
@@ -197,25 +194,18 @@ export function WebsiteAnalyzerClient() {
             />
           </div>
 
-          {/* CTA */}
           <div className="bg-brand-50 border border-brand-200 rounded-2xl p-6 text-center">
-            <p className="font-semibold text-brand-900 mb-2">
-              🚀 Fix these issues automatically with an AI chatbot
-            </p>
+            <p className="font-semibold text-brand-900 mb-2">🚀 Fix these issues automatically with an AI chatbot</p>
             <p className="text-sm text-brand-700 mb-4">
               An AI chatbot trained on your website answers customer questions 24/7, fills content gaps, and captures leads automatically.
             </p>
-            <a
-              href="/signup"
-              className="inline-flex items-center gap-2 bg-brand-600 text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-brand-700 transition-colors text-sm"
-            >
+            <a href="/signup" className="inline-flex items-center gap-2 bg-brand-600 text-white font-semibold px-6 py-2.5 rounded-xl hover:bg-brand-700 transition-colors text-sm">
               Add chatbot to my website — free →
             </a>
           </div>
         </div>
       )}
 
-      {/* Empty state */}
       {!analysis && !scanning && (
         <div className="text-center py-12 text-gray-400">
           <div className="text-5xl mb-4">🔍</div>
