@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { isSubscriptionActive } from '@/lib/stripe'
+import { checkUsageLimit } from '@/lib/usage'
 import Anthropic from '@anthropic-ai/sdk'
 
 export const runtime = 'nodejs'
@@ -35,7 +36,22 @@ export async function POST(req: NextRequest) {
     .eq('id', organizationId).single()
 
   const isActive = (org as any)?.subscription_plan === 'free' || isSubscriptionActive((org as any)?.subscription_status ?? null)
-  if (!isActive) return NextResponse.json({ error: 'Subscription inactive. Please upgrade.' }, { status: 402 })
+  if (!isActive) {
+    return NextResponse.json({ error: 'Subscription inactive. Please upgrade.', code: 'SUBSCRIPTION_INACTIVE' }, { status: 402 })
+  }
+
+  // CHECK USAGE LIMITS
+  const { allowed, used, limit, plan } = await checkUsageLimit(organizationId)
+  if (!allowed) {
+    return NextResponse.json({
+      error: `You've used all ${limit} messages on your ${plan} plan this month. Upgrade to continue chatting.`,
+      code: 'USAGE_LIMIT_EXCEEDED',
+      used,
+      limit,
+      plan,
+      upgradeUrl: '/dashboard/billing',
+    }, { status: 429 })
+  }
 
   const { data: project } = await supabase
     .from('projects').select('system_prompt, name')
@@ -71,7 +87,8 @@ export async function POST(req: NextRequest) {
         const anthropicStream = anthropic.messages.stream({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 1024,
-          system: (project?.system_prompt ?? 'You are a helpful assistant.') + '\n\nFormatting rules: Use ## for section headers, **bold** for important terms, and bullet points (-) for lists. Keep responses concise and well-structured. Never write walls of text.',
+          system: (project?.system_prompt ?? 'You are a helpful assistant.') +
+            '\n\nFormatting: Use ## for headers, **bold** for key terms, bullet points for lists. Keep responses concise.',
           messages: [{ role: 'user', content: message }],
         })
 
@@ -81,12 +98,8 @@ export async function POST(req: NextRequest) {
             fullResponse += chunk
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ delta: chunk })}\n\n`))
           }
-          if (event.type === 'message_start' && event.message.usage) {
-            inputTokens = event.message.usage.input_tokens
-          }
-          if (event.type === 'message_delta' && event.usage) {
-            outputTokens = event.usage.output_tokens
-          }
+          if (event.type === 'message_start' && event.message.usage) inputTokens = event.message.usage.input_tokens
+          if (event.type === 'message_delta' && event.usage) outputTokens = event.usage.output_tokens
         }
 
         await admin.from('messages').insert({
@@ -112,10 +125,22 @@ export async function POST(req: NextRequest) {
           .update({ updated_at: new Date().toISOString() })
           .eq('id', activeConversationId)
 
+        // Send usage warning at 80%
+        const newUsed = used + 1
+        const newPercent = Math.round((newUsed / limit) * 100)
+        if (newPercent >= 80 && plan === 'free') {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            usageWarning: true,
+            used: newUsed,
+            limit,
+            percent: newPercent,
+          })}\n\n`))
+        }
+
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
         controller.close()
       } catch (err) {
-        console.error('Anthropic error:', err)
+        console.error('Chat error:', err)
         controller.error(err)
       }
     },
@@ -127,6 +152,8 @@ export async function POST(req: NextRequest) {
       'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
       'X-Conversation-Id': activeConversationId ?? '',
+      'X-Usage-Used': String(used + 1),
+      'X-Usage-Limit': String(limit),
     },
   })
 }
