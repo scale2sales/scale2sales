@@ -4,8 +4,8 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: {
-    default: 'ChatFlow — AI Chatbot Platform',
-    template: '%s | ChatFlow',
+    default: 'Scale2Sales — AI Chatbot Platform',
+    template: '%s | Scale2Sales',
   },
   description: 'Multi-tenant AI chatbot platform for your products',
 }
