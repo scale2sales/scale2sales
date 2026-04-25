@@ -153,10 +153,11 @@ export function BillingClient({ org, currentPlan, planLimits, usage, success, ca
       <div className="grid md:grid-cols-3 gap-6">
         {Object.entries(PLAN_DETAILS).map(([key, plan]) => {
           const isCurrent = key === currentPlan
+          const planAny = plan as any
           const displayPrice = billingInterval === 'year' ? plan.annualPrice : plan.monthlyPrice
           return (
-            <div key={key} className={`relative rounded-2xl border-2 p-6 flex flex-col ${plan.popular ? 'border-brand-500 shadow-lg' : 'border-gray-200'}`}>
-              {plan.popular && (
+            <div key={key} className={`relative rounded-2xl border-2 p-6 flex flex-col ${planAny.popular ? 'border-brand-500 shadow-lg' : 'border-gray-200}>
+              {planAny.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <span className="bg-brand-600 text-white text-xs font-bold px-4 py-1 rounded-full">Most Popular</span>
                 </div>
