@@ -410,7 +410,7 @@ export default function LandingPage() {
               <Link href="/login" className="hover:text-gray-600">Login</Link>
               <Link href="/signup" className="hover:text-gray-600">Sign up</Link>
             </div>
-            <p className="text-sm text-gray-400">© 2025 Scale2Sales. All rights reserved.</p>
+            <p className="text-sm text-gray-400">© 2026 Scale2Sales. All rights reserved. · <a href="/privacy" style="color:inherit">Privacy</a> · <a href="/terms" style="color</p>
           </div>
         </div>
       </footer>
