@@ -12,7 +12,7 @@ export function EmbedPageClient({ project, userEmail }: { project: any; userEmai
   const [linkCopied, setLinkCopied] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
   const [sendingEmail, setSendingEmail] = useState(false)
-  const [activeTab, setActiveTab] = useState<'embed' | 'share'>('share')
+  const [activeTab, setActiveTab] = useState<'share' | 'embed' | 'wordpress'>('share')
 
   const appUrl = 'https://scale2sales.com'
   const shareUrl = `${appUrl}/chat/${project.id}`
@@ -48,13 +48,7 @@ export function EmbedPageClient({ project, userEmail }: { project: any; userEmai
       await fetch('/api/send-embed-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userEmail,
-          projectName: project.name,
-          embedCode,
-          shareUrl,
-          projectId: project.id,
-        }),
+        body: JSON.stringify({ email: userEmail, projectName: project.name, embedCode, shareUrl, projectId: project.id }),
       })
       setEmailSent(true)
       setTimeout(() => setEmailSent(false), 4000)
@@ -65,56 +59,55 @@ export function EmbedPageClient({ project, userEmail }: { project: any; userEmai
   }
 
   const platforms = [
-    { name: 'WordPress', icon: '🔵', steps: 'Appearance → Theme Editor → footer.php → paste before </body>' },
-    { name: 'Shopify', icon: '🟢', steps: 'Online Store → Themes → Edit code → theme.liquid → paste before </body>' },
-    { name: 'Webflow', icon: '🔷', steps: 'Project Settings → Custom Code → Footer Code → paste code' },
-    { name: 'Wix', icon: '⬛', steps: 'Settings → Custom Code → Add Code → Body → paste code' },
-    { name: 'Squarespace', icon: '⬜', steps: 'Settings → Advanced → Code Injection → Footer → paste code' },
-    { name: 'GoDaddy', icon: '🟡', steps: 'Website → Edit Site → Pages → SEO → Footer Code → paste code' },
+    { name: 'WordPress', icon: '🔵', steps: 'Appearance -> Theme Editor -> footer.php -> paste before closing body tag' },
+    { name: 'Shopify', icon: '🟢', steps: 'Online Store -> Themes -> Edit code -> theme.liquid -> paste before closing body tag' },
+    { name: 'Webflow', icon: '🔷', steps: 'Project Settings -> Custom Code -> Footer Code -> paste code' },
+    { name: 'Wix', icon: '⬛', steps: 'Settings -> Custom Code -> Add Code -> Body -> paste code' },
+    { name: 'Squarespace', icon: '⬜', steps: 'Settings -> Advanced -> Code Injection -> Footer -> paste code' },
+    { name: 'GoDaddy', icon: '🟡', steps: 'Website -> Edit Site -> Pages -> SEO -> Footer Code -> paste code' },
   ]
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <div className="mb-6">
-        <Link href={`/dashboard/projects`} className="text-sm text-gray-500 hover:text-gray-700">
-          ← Back to projects
+        <Link href="/dashboard/projects" className="text-sm text-gray-500 hover:text-gray-700">
+          Back to projects
         </Link>
         <h1 className="text-2xl font-bold text-gray-900 mt-2">Add to your website</h1>
         <p className="text-gray-500 mt-1">Choose the easiest way to get your chatbot live</p>
       </div>
 
       {/* Tab switcher */}
-      <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
+      <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-xl w-fit flex-wrap">
         <button
           onClick={() => setActiveTab('share')}
-          className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'share' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
-          }`}
+          className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'share' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
         >
-          🔗 Share Link
-          <span className="ml-2 text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">Easiest</span>
+          Share Link
+          <span className="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">Easiest</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('wordpress')}
+          className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'wordpress' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          WordPress Plugin
         </button>
         <button
           onClick={() => setActiveTab('embed')}
-          className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-            activeTab === 'embed' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
-          }`}
+          className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'embed' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
         >
-          {'<>'} Embed Code
+          Embed Code
         </button>
       </div>
 
       {/* Share Link Tab */}
       {activeTab === 'share' && (
         <div className="space-y-6">
-          {/* Share link card */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
             <h2 className="font-bold text-gray-900 mb-1">Your chatbot share link</h2>
             <p className="text-sm text-gray-500 mb-4">
-              Share this link anywhere — no website editing needed! Works on social media, email, WhatsApp, anywhere.
+              Share this link anywhere -- no website editing needed! Works on social media, email, WhatsApp, and anywhere else.
             </p>
-
-            {/* Link display */}
             <div className="flex gap-3 mb-4">
               <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-brand-600 font-mono truncate">
                 {shareUrl}
@@ -123,36 +116,31 @@ export function EmbedPageClient({ project, userEmail }: { project: any; userEmai
                 onClick={copyShareLink}
                 className="px-5 py-3 rounded-xl bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700 transition-colors flex items-center gap-2"
               >
-                {linkCopied ? '✅ Copied!' : '📋 Copy link'}
+                {linkCopied ? 'Copied!' : 'Copy link'}
               </button>
             </div>
-
-            {/* Open link */}
-            <div className="flex gap-3">
-              <a
-                href={shareUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                </svg>
-                Preview chatbot
-              </a>
-            </div>
+            <a
+              href={shareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+              </svg>
+              Preview chatbot
+            </a>
           </div>
 
-          {/* Where to share */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
             <h2 className="font-bold text-gray-900 mb-4">Where to share your link</h2>
             <div className="grid md:grid-cols-2 gap-3">
               {[
-                { icon: '📧', title: 'Email signature', desc: 'Add "Chat with our AI →" to your email signature' },
+                { icon: '📧', title: 'Email signature', desc: 'Add "Chat with our AI" to your email signature' },
                 { icon: '📱', title: 'Instagram bio', desc: 'Put the link in your Instagram or TikTok bio' },
                 { icon: '💼', title: 'LinkedIn profile', desc: 'Add to your LinkedIn featured section' },
-                { icon: '🗺️', title: 'Google Business', desc: 'Add to your Google Business Profile website field' },
-                { icon: '💬', title: 'WhatsApp/SMS', desc: 'Share directly with customers who message you' },
+                { icon: '🗺️', title: 'Google Business', desc: 'Add to your Google Business Profile' },
+                { icon: '💬', title: 'WhatsApp / SMS', desc: 'Share directly with customers who message you' },
                 { icon: '🖨️', title: 'Business cards', desc: 'Print as QR code on business cards or flyers' },
               ].map(item => (
                 <div key={item.title} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
@@ -166,28 +154,105 @@ export function EmbedPageClient({ project, userEmail }: { project: any; userEmai
             </div>
           </div>
 
-          {/* QR Code hint */}
           <div className="bg-brand-50 border border-brand-200 rounded-2xl p-5 flex items-center gap-4">
             <span className="text-3xl">📱</span>
             <div className="flex-1">
-              <p className="font-semibold text-brand-900">Generate a QR code for free</p>
+              <p className="font-semibold text-brand-900">Generate a free QR code</p>
               <p className="text-sm text-brand-700 mt-0.5">
                 Go to{' '}
-                <a href="https://qr-code-generator.com" target="_blank" rel="noopener noreferrer" className="underline">
-                  qr-code-generator.com
-                </a>
-                {' '}→ paste your share link → download QR code → print on menus, cards, or posters.
+                <a href="https://qr-code-generator.com" target="_blank" rel="noopener noreferrer" className="underline">qr-code-generator.com</a>
+                {' '}-- paste your share link -- download QR code -- print on menus, cards, or posters.
               </p>
             </div>
           </div>
 
-          {/* Still want to embed */}
-          <div className="text-center py-4">
+          <div className="text-center py-2">
             <p className="text-sm text-gray-500">
-              Want to embed the chatbot directly on your website instead?{' '}
-              <button onClick={() => setActiveTab('embed')} className="text-brand-600 hover:underline font-medium">
-                Get the embed code →
-              </button>
+              Using WordPress?{' '}
+              <button onClick={() => setActiveTab('wordpress')} className="text-brand-600 hover:underline font-medium">Install our plugin instead</button>
+              {' '}-- or{' '}
+              <button onClick={() => setActiveTab('embed')} className="text-brand-600 hover:underline font-medium">get the embed code</button>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* WordPress Plugin Tab */}
+      {activeTab === 'wordpress' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <h2 className="font-bold text-gray-900 mb-1">WordPress Plugin</h2>
+            <p className="text-sm text-gray-500 mb-6">Install our plugin in 2 minutes -- no coding required. Works with any WordPress theme.</p>
+
+            <div className="space-y-5 mb-6">
+              {[
+                { step: '1', title: 'Download the plugin', desc: 'Click the download button below to get the zip file.' },
+                { step: '2', title: 'Upload to WordPress', desc: 'Go to Plugins -> Add New -> Upload Plugin -> choose the zip file -> Install Now -> Activate.' },
+                { step: '3', title: 'Enter your Project ID', desc: 'Go to Settings -> Scale2Sales in your WordPress admin. Paste your Project ID and click Save.' },
+                { step: '4', title: 'Done! Your chatbot is live.', desc: 'The chatbot will appear on every page of your website automatically.' },
+              ].map(item => (
+                <div key={item.step} className="flex items-start gap-4">
+                  <div className="w-8 h-8 rounded-full bg-brand-600 text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
+                    {item.step}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{item.title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Project ID display */}
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
+              <p className="text-xs text-gray-500 mb-1">Your Project ID (you will need this in Step 3):</p>
+              <div className="flex items-center gap-3">
+                <p className="text-sm font-mono font-bold text-brand-600 flex-1 truncate">{project.id}</p>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(project.id); }}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-gray-200 text-gray-600 hover:bg-gray-300 transition-colors"
+                >
+                  Copy ID
+                </button>
+              </div>
+            </div>
+
+            {/* Download button */}
+            <a
+              href="/scale2sales-chatbot.zip"
+              download
+              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition-colors text-sm"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Download WordPress Plugin
+            </a>
+          </div>
+
+          {/* Preview */}
+          <div className="bg-brand-50 border border-brand-200 rounded-2xl p-5 flex items-center gap-4">
+            <span className="text-3xl">👀</span>
+            <div className="flex-1">
+              <p className="font-semibold text-brand-900">Preview your chatbot first</p>
+              <p className="text-sm text-brand-700 mt-0.5">See exactly how it looks before installing.</p>
+            </div>
+            <a
+              href={shareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors"
+            >
+              Preview
+            </a>
+          </div>
+
+          <div className="text-center py-2">
+            <p className="text-sm text-gray-500">
+              Not using WordPress?{' '}
+              <button onClick={() => setActiveTab('share')} className="text-brand-600 hover:underline font-medium">Use share link</button>
+              {' '}or{' '}
+              <button onClick={() => setActiveTab('embed')} className="text-brand-600 hover:underline font-medium">get embed code</button>
             </p>
           </div>
         </div>
@@ -196,52 +261,32 @@ export function EmbedPageClient({ project, userEmail }: { project: any; userEmai
       {/* Embed Code Tab */}
       {activeTab === 'embed' && (
         <div className="space-y-6">
-          {/* Customize */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
             <h2 className="font-bold text-gray-900 mb-4">Customize your widget</h2>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Widget name</label>
-                <input
-                  type="text"
-                  value={widgetName}
-                  onChange={e => setWidgetName(e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                />
+                <input type="text" value={widgetName} onChange={e => setWidgetName(e.target.value)}
+                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"/>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Brand color</label>
                 <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={primaryColor}
-                    onChange={e => setPrimaryColor(e.target.value)}
-                    className="w-12 h-10 rounded-lg border border-gray-300 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={primaryColor}
-                    onChange={e => setPrimaryColor(e.target.value)}
-                    className="flex-1 rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  />
+                  <input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)}
+                    className="w-12 h-10 rounded-lg border border-gray-300 cursor-pointer"/>
+                  <input type="text" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)}
+                    className="flex-1 rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"/>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Greeting message</label>
-                <input
-                  type="text"
-                  value={greeting}
-                  onChange={e => setGreeting(e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                />
+                <input type="text" value={greeting} onChange={e => setGreeting(e.target.value)}
+                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"/>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
-                <select
-                  value={position}
-                  onChange={e => setPosition(e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                >
+                <select value={position} onChange={e => setPosition(e.target.value)}
+                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
                   <option value="right">Bottom right</option>
                   <option value="left">Bottom left</option>
                 </select>
@@ -249,37 +294,28 @@ export function EmbedPageClient({ project, userEmail }: { project: any; userEmai
             </div>
           </div>
 
-          {/* Code snippet */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-bold text-gray-900">Your embed code</h2>
               <div className="flex gap-2">
-                <button
-                  onClick={copyEmbed}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors"
-                >
-                  {copied ? '✅ Copied!' : '📋 Copy code'}
+                <button onClick={copyEmbed}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 transition-colors">
+                  {copied ? 'Copied!' : 'Copy code'}
                 </button>
-                <button
-                  onClick={sendEmailCode}
-                  disabled={sendingEmail || emailSent}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                >
-                  {emailSent ? '✅ Sent!' : sendingEmail ? 'Sending...' : '📧 Email me the code'}
+                <button onClick={sendEmailCode} disabled={sendingEmail || emailSent}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                  {emailSent ? 'Sent!' : sendingEmail ? 'Sending...' : 'Email me the code'}
                 </button>
               </div>
             </div>
-            <pre className="bg-gray-900 text-green-400 text-xs rounded-xl p-4 overflow-x-auto leading-relaxed">
+            <pre className="bg-gray-900 text-green-400 text-xs rounded-xl p-4 overflow-x-auto leading-relaxed whitespace-pre-wrap">
               {embedCode}
             </pre>
             {emailSent && (
-              <p className="text-sm text-green-600 mt-2">
-                Code sent to {userEmail}! Forward it to your web developer.
-              </p>
+              <p className="text-sm text-green-600 mt-2">Code sent to {userEmail}! Forward it to your web developer.</p>
             )}
           </div>
 
-          {/* Platform guides */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
             <h2 className="font-bold text-gray-900 mb-4">How to add to your website</h2>
             <div className="space-y-3">
@@ -294,11 +330,12 @@ export function EmbedPageClient({ project, userEmail }: { project: any; userEmai
               ))}
             </div>
             <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-              <p className="text-sm font-medium text-yellow-800">
-                Not sure how to do this?
-              </p>
+              <p className="text-sm font-medium text-yellow-800">Not sure how to do this?</p>
               <p className="text-xs text-yellow-700 mt-1">
-                Use the <button onClick={() => setActiveTab('share')} className="underline font-medium">Share Link</button> instead — no code needed! Or email the code to your web developer.
+                Use the{' '}
+                <button onClick={() => setActiveTab('share')} className="underline font-medium">Share Link</button>
+                {' '}instead -- no code needed! Or{' '}
+                <button onClick={() => setActiveTab('wordpress')} className="underline font-medium">install our WordPress plugin</button>.
               </p>
             </div>
           </div>
