@@ -12,6 +12,7 @@ export function Sidebar({ organization }: { organization: any }) {
     {
       label: 'Dashboard',
       href: '/dashboard',
+      exact: true,
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
@@ -28,6 +29,16 @@ export function Sidebar({ organization }: { organization: any }) {
       ),
     },
     {
+      label: 'Add to Website',
+      href: '/dashboard/embed',
+      highlight: true,
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+        </svg>
+      ),
+    },
+    {
       label: 'Analytics',
       href: '/dashboard/analytics',
       icon: (
@@ -36,7 +47,6 @@ export function Sidebar({ organization }: { organization: any }) {
         </svg>
       ),
     },
-    // Only show Team for paid users
     ...(!isFree ? [{
       label: 'Team',
       href: '/dashboard/team',
@@ -66,7 +76,6 @@ export function Sidebar({ organization }: { organization: any }) {
 
   return (
     <aside className="flex flex-col w-64 min-h-screen bg-gray-900 text-white">
-      {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-800">
         <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
           <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -81,12 +90,12 @@ export function Sidebar({ organization }: { organization: any }) {
         </div>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1">
         {navItems.map((item) => {
-          const isActive = item.href === '/dashboard'
-            ? pathname === '/dashboard'
+          const isActive = item.exact
+            ? pathname === item.href
             : pathname.startsWith(item.href)
+
           return (
             <Link
               key={item.href}
@@ -94,12 +103,19 @@ export function Sidebar({ organization }: { organization: any }) {
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-brand-600 text-white'
+                  : item.highlight && !isActive
+                  ? 'text-green-400 hover:bg-gray-800 hover:text-green-300'
                   : 'text-gray-400 hover:bg-gray-800 hover:text-white'
               }`}
             >
               {item.icon}
               {item.label}
-              {item.label === 'Billing' && isFree && (
+              {item.label === 'Add to Website' && !isActive && (
+                <span className="ml-auto text-xs bg-green-500 text-white px-1.5 py-0.5 rounded-full font-medium">
+                  Go live
+                </span>
+              )}
+              {item.label === 'Billing' && isFree && !isActive && (
                 <span className="ml-auto text-xs bg-yellow-500 text-white px-1.5 py-0.5 rounded-full font-medium">
                   Upgrade
                 </span>
@@ -109,7 +125,6 @@ export function Sidebar({ organization }: { organization: any }) {
         })}
       </nav>
 
-      {/* Plan badge */}
       {organization && (
         <div className="px-4 py-3 mx-3 mb-2 rounded-lg bg-gray-800">
           <p className="text-xs text-gray-400 uppercase tracking-wide">Plan</p>
@@ -127,7 +142,6 @@ export function Sidebar({ organization }: { organization: any }) {
         </div>
       )}
 
-      {/* Sign out */}
       <div className="p-3 border-t border-gray-800">
         <button
           onClick={handleSignOut}
