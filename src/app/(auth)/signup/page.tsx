@@ -28,13 +28,7 @@ export default function SignupPage() {
       return
     }
 
-    // Send welcome email
-    fetch('/api/emails/welcome', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, name: fullName }),
-    }).catch(() => {})
-  }
+   }
 
   return (
     <div className="w-full max-w-sm">
