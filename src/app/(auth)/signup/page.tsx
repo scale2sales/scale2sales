@@ -1,6 +1,5 @@
-// @ts-nocheck  
+// @ts-nocheck
 'use client'
-
 import { useState } from 'react'
 import Link from 'next/link'
 import { signUp } from '@/lib/actions/auth'
@@ -17,12 +16,24 @@ export default function SignupPage() {
     setError(null)
     setLoading(true)
 
-    const result = await signUp(new FormData(e.currentTarget))
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get('email') as string
+    const fullName = formData.get('full_name') as string
+
+    const result = await signUp(formData)
 
     if (result?.error) {
       setError(result.error)
       setLoading(false)
+      return
     }
+
+    // Send welcome email
+    fetch('/api/emails/welcome', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, name: fullName }),
+    }).catch(() => {})
   }
 
   return (
@@ -31,7 +42,6 @@ export default function SignupPage() {
         <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
         <p className="text-sm text-gray-500 mt-1">Start building AI chatbots today</p>
       </div>
-
       <Card>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -41,11 +51,18 @@ export default function SignupPage() {
               </div>
             )}
             <Input
+              name="full_name"
+              type="text"
+              label="Your name"
+              placeholder="John Smith"
+              required
+              autoComplete="name"
+            />
+            <Input
               name="org_name"
               type="text"
               label="Company / Organization"
               placeholder="Acme Inc."
-              required
               autoComplete="organization"
             />
             <Input
@@ -76,7 +93,6 @@ export default function SignupPage() {
           </form>
         </CardContent>
       </Card>
-
       <p className="text-center text-sm text-gray-500 mt-4">
         Already have an account?{' '}
         <Link href="/login" className="text-brand-600 font-medium hover:underline">
