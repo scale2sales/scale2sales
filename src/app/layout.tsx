@@ -1,13 +1,27 @@
-// @ts-nocheck  
+// @ts-nocheck
 import type { Metadata } from 'next'
 import './globals.css'
+import { CookieBanner } from '@/components/CookieBanner'
 
 export const metadata: Metadata = {
   title: {
-    default: 'Scale2Sales — AI Chatbot Platform',
+    default: 'Scale2Sales — AI Chatbot for Your Website in 5 Minutes',
     template: '%s | Scale2Sales',
   },
-  description: 'Multi-tenant AI chatbot platform for your products',
+  description: 'Add an AI chatbot trained on your website to capture leads, answer questions 24/7, and convert visitors into customers. No coding required.',
+  keywords: 'ai chatbot, website chatbot, lead generation, customer support ai',
+  openGraph: {
+    title: 'Scale2Sales — AI Chatbot for Your Website',
+    description: 'Add an AI chatbot trained on your website in 5 minutes. No coding required.',
+    url: 'https://scale2sales.com',
+    siteName: 'Scale2Sales',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Scale2Sales — AI Chatbot for Your Website',
+    description: 'Add an AI chatbot trained on your website in 5 minutes.',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -23,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-sans antialiased bg-white text-gray-900">
         {children}
+        <CookieBanner />
       </body>
     </html>
   )
