@@ -1,8 +1,8 @@
 (function () {
   const config = window.Scale2SalesConfig || {};
   const projectId = config.projectId;
-  const appUrl = config.appUrl || 'https://scale2sales.vercel.app';
-  const position = config.position || 'bottom-right';
+  const appUrl = config.appUrl || 'https://scale2sales.com';
+  const position = config.position || 'right';
   const primaryColor = config.primaryColor || '#6366f1';
   const greeting = config.greeting || 'Hi! How can I help you today?';
   const widgetName = config.widgetName || 'AI Assistant';
@@ -10,13 +10,15 @@
 
   if (!projectId) { console.warn('Scale2Sales: projectId is required'); return; }
 
+  const isRight = position === 'right' || position === 'bottom-right';
+
   const style = document.createElement('style');
   style.textContent = `
-    #s2s-btn-wrap { position: fixed; ${position === 'bottom-right' ? 'right: 24px' : 'left: 24px'}; bottom: 24px; z-index: 999998; }
+    #s2s-btn-wrap { position: fixed; ${isRight ? 'right: 24px' : 'left: 24px'}; bottom: 24px; z-index: 999998; }
     #s2s-widget-btn { width: 56px; height: 56px; border-radius: 50%; background: ${primaryColor}; border: none; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.18); display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
     #s2s-widget-btn:hover { transform: scale(1.08); }
     #s2s-widget-btn svg { width: 26px; height: 26px; }
-    #s2s-chat-box { position: fixed; ${position === 'bottom-right' ? 'right: 24px' : 'left: 24px'}; bottom: 92px; width: 360px; height: 520px; border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.18); z-index: 999999; display: none; background: white; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, sans-serif; flex-direction: column; }
+    #s2s-chat-box { position: fixed; ${isRight ? 'right: 24px' : 'left: 24px'}; bottom: 92px; width: 360px; height: 520px; border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.18); z-index: 999999; display: none; background: white; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, sans-serif; flex-direction: column; }
     #s2s-chat-box.open { display: flex; }
     #s2s-chat-header { padding: 14px 16px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
     #s2s-chat-header .avatar { width: 36px; height: 36px; border-radius: 50%; background: ${primaryColor}22; display: flex; align-items: center; justify-content: center; }
@@ -46,7 +48,6 @@
   `;
   document.head.appendChild(style);
 
-  // Button
   const btnWrap = document.createElement('div');
   btnWrap.id = 's2s-btn-wrap';
   btnWrap.style.position = 'fixed';
@@ -59,7 +60,6 @@
   `;
   document.body.appendChild(btnWrap);
 
-  // Chat box (built directly in DOM, no iframe)
   const chatBox = document.createElement('div');
   chatBox.id = 's2s-chat-box';
   chatBox.innerHTML = `
@@ -69,10 +69,10 @@
     </div>
     <div id="s2s-messages"></div>
     <div id="s2s-input-area">
-      <div id="s2s-input-wrap"><textarea id="s2s-textarea" rows="1" placeholder="Type a message…"></textarea></div>
+      <div id="s2s-input-wrap"><textarea id="s2s-textarea" rows="1" placeholder="Type a message..."></textarea></div>
       <button id="s2s-send" disabled><svg fill="none" stroke="white" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg></button>
     </div>
-    <div id="s2s-powered">Powered by <a href="https://scale2sales.vercel.app" target="_blank">Scale2Sales</a></div>
+    <div id="s2s-powered">Powered by <a href="https://scale2sales.com" target="_blank">Scale2Sales</a></div>
   `;
   document.body.appendChild(chatBox);
 
@@ -84,10 +84,7 @@
   let isLoading = false;
   let isOpen = false;
 
-  // Add greeting
   addMsg('bot', greeting);
-
-  // Show unread after 3s
   setTimeout(() => { if (!isOpen) { unread.style.display = 'flex'; } }, 3000);
 
   document.getElementById('s2s-widget-btn').addEventListener('click', () => {
