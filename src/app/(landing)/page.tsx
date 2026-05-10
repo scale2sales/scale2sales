@@ -181,7 +181,7 @@ export default function LandingPage() {
             ].map((plan) => (
               <div key={plan.name} className={`relative p-6 rounded-2xl flex flex-col ${plan.highlight ? 'bg-brand-600 text-white shadow-xl shadow-brand-200' : 'bg-white border border-gray-200'}`}>
                 {plan.badge && (
-                  <div className="absolute -top-3 right-1/2 -translate-x-1/2">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="bg-yellow-400 text-yellow-900 text-xs font-bold px-4 py-1 rounded-full">{plan.badge}</span>
                   </div>
                 )}
@@ -264,23 +264,6 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-
-    {/* Scale2Sales Support Chatbot */}
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `
-          window.Scale2SalesConfig = {
-            projectId: "d5507f3c-29e6-4b11-b19b-d1e05e0227a1",
-            appUrl: "https://scale2sales.com",
-            primaryColor: "#6366f1",
-            widgetName: "Scale2Sales Support",
-            greeting: "Hi! I can answer questions about Scale2Sales -- pricing, features, how to get started. What would you like to know?",
-            position: "right"
-          };
-        `
-      }}
-    />
-    <script src="https://scale2sales.com/widget.js" async />
     </div>
   )
 }
