@@ -112,7 +112,7 @@
     wrap.className = 's2s-msg ' + role;
     const botAv = `<div class="s2s-bot-av"><svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg></div>`;
     wrap.innerHTML = role === 'bot'
-      ? `${botAv}<div class="s2s-bubble">${esc(content)}</div>`
+      ? `${botAv}<div class="s2s-bubble" style="white-space:normal;">${renderMarkdown(esc(content))}</div>`
       : `<div class="s2s-bubble">${esc(content)}</div>`;
     messagesEl.appendChild(wrap);
     messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -131,6 +131,20 @@
   }
 
   function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function renderMarkdown(text) {
+    return text
+      .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+      .replace(/^## \*\*(.+?)\*\*$/gm, '<h3 style="font-size:13px;font-weight:700;margin:10px 0 4px;color:#111;display:block;">$1</h3>')
+      .replace(/^## (.+)$/gm, '<h3 style="font-size:13px;font-weight:700;margin:10px 0 4px;color:#111;display:block;">$1</h3>')
+      .replace(/^### (.+)$/gm, '<h4 style="font-size:12px;font-weight:700;margin:8px 0 3px;color:#111;display:block;">$1</h4>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/^- (.+)$/gm, '<li style="margin:3px 0;padding-left:4px;">$1</li>')
+      .replace(/(<li[^>]*>[\s\S]*?<\/li>\n?)+/g, function(m){ return '<ul style="margin:6px 0;padding-left:16px;list-style:disc;">'+m+'</ul>'; })
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+  }
+
 
   async function send() {
     const text = textarea.value.trim();
@@ -164,7 +178,7 @@
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
             if (data === '[DONE]') break;
-            try { const p = JSON.parse(data); if (p.delta) { full += p.delta; bubble.textContent = full; messagesEl.scrollTop = messagesEl.scrollHeight; } } catch {}
+            try { const p = JSON.parse(data); if (p.delta) { full += p.delta; bubble.innerHTML = renderMarkdown(esc(full)); messagesEl.scrollTop = messagesEl.scrollHeight; } } catch {}
           }
         }
       }
