@@ -181,7 +181,7 @@ export default function LandingPage() {
             ].map((plan) => (
               <div key={plan.name} className={`relative p-6 rounded-2xl flex flex-col ${plan.highlight ? 'bg-brand-600 text-white shadow-xl shadow-brand-200' : 'bg-white border border-gray-200'}`}>
                 {plan.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <div className="absolute -top-3 right-1/2 -translate-x-1/2">
                     <span className="bg-yellow-400 text-yellow-900 text-xs font-bold px-4 py-1 rounded-full">{plan.badge}</span>
                   </div>
                 )}
