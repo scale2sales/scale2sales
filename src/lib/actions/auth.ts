@@ -1,8 +1,5 @@
-// @ts-nocheck  
 // @ts-nocheck
-
 'use server'
-
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -20,14 +17,21 @@ function slugify(text: string): string {
 export async function signUp(formData: FormData) {
   const supabase = createClient()
   const admin = createAdminClient()
-
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const orgName = formData.get('org_name') as string
+  const fullName = formData.get('full_name') as string
 
   const { data: authData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
+    options: {
+      data: {
+        full_name: fullName,
+        company_name: orgName,
+      },
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+    },
   })
 
   if (signUpError || !authData.user) {
@@ -38,8 +42,8 @@ export async function signUp(formData: FormData) {
   const { data: org, error: orgError } = await admin
     .from('organizations')
     .insert({
-      name: orgName,
-      slug: slugify(orgName),
+      name: orgName || fullName || email.split('@')[0],
+      slug: slugify(orgName || fullName || email.split('@')[0]),
     })
     .select()
     .single()
@@ -55,13 +59,18 @@ export async function signUp(formData: FormData) {
     role: 'owner',
   })
 
-  revalidatePath('/', 'layout')
-  redirect('/dashboard')
+  // If email confirmation is disabled — session exists, redirect to dashboard
+  if (authData.session) {
+    revalidatePath('/', 'layout')
+    redirect('/dashboard')
+  }
+
+  // Email confirmation required — return success so page shows "check email"
+  return { success: true, email }
 }
 
 export async function signIn(formData: FormData) {
   const supabase = createClient()
-
   const email = formData.get('email') as string
   const password = formData.get('password') as string
 
