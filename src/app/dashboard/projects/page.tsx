@@ -152,6 +152,7 @@ export default function ProjectsPage() {
 
   async function handleCreate(e) {
     e.preventDefault()
+    if (!websiteUrl.trim()) { setScanError('Please enter your website URL before creating a project.'); return }
     if (websiteUrl.trim() && !scanComplete) { setShowScanWarning(true); return }
     setCreating(true)
     const formData = new FormData()
@@ -187,7 +188,7 @@ export default function ProjectsPage() {
                   Website URL <span className="text-gray-400 font-normal">(recommended)</span>
                 </label>
                 <div className="flex gap-2">
-                  <input type="text" placeholder="https://mysite.com" value={websiteUrl}
+                  <input type="text" placeholder="https://mysite.com" value={websiteUrl} required
                     onChange={e => { setWebsiteUrl(e.target.value); setScanComplete(false); setScanError(''); setShowScanWarning(false) }}
                     className={`flex-1 rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 ${showScanWarning ? 'border-yellow-400 bg-yellow-50' : 'border-gray-300'}`}
                   />
@@ -248,7 +249,7 @@ export default function ProjectsPage() {
                 </div>
               )}
 
-              <button type="submit" disabled={creating || scanning || !name.trim()}
+              <button type="submit" disabled={creating || scanning || !name.trim() || !websiteUrl.trim()}
                 className="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                 {creating ? 'Creating...' : 'Create project'}
               </button>
