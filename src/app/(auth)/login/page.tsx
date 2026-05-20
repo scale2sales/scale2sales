@@ -1,7 +1,7 @@
-// @ts-nocheck  
+	// @ts-nocheck  
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { signIn } from '@/lib/actions/auth'
 import { Button } from '@/components/ui/Button'
@@ -11,6 +11,14 @@ import { Card, CardContent } from '@/components/ui/Card'
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  useEffect(() => {
+  const params = new URLSearchParams(window.location.search)
+  const token_hash = params.get('token_hash')
+  const type = params.get('type')
+  if (token_hash && type) {
+    window.location.href = `/auth/callback?token_hash=${token_hash}&type=${type}`
+  }
+}, [])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
