@@ -1,11 +1,11 @@
-'use client'
+﻿'use client'
 
 import { useEffect } from 'react'
 
 export function WidgetLoader() {
   useEffect(() => {
     // Only load after React has fully hydrated
-    window.Scale2SalesConfig = {
+    (window as any).Scale2SalesConfig = {
       projectId: 'd5507f3c-29e6-4b11-b19b-d1e05e0227a1',
       appUrl: 'https://scale2sales.com',
       primaryColor: '#6366f1',
@@ -28,3 +28,4 @@ export function WidgetLoader() {
 
   return null
 }
+
