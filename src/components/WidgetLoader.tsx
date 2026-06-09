@@ -6,7 +6,7 @@ export function WidgetLoader() {
   useEffect(() => {
     // Only load after React has fully hydrated
     (window as any).Scale2SalesConfig = {
-      projectId: 'd5507f3c-29e6-4b11-b19b-d1e05e0227a1',
+      projectId: '31dadbeb-d706-49f0-8880-4565b614c2aa',
       appUrl: 'https://scale2sales.com',
       primaryColor: '#6366f1',
       widgetName: 'Scale2Sales Support',
