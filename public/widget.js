@@ -76,8 +76,8 @@
     t = t.replace(/\*([^*]+?)\*/g, '<em>$1</em>');
     t = t.replace(/^- (.+)$/gm, '<li style="margin:3px 0;padding-left:4px;">$1</li>');
     t = t.replace(/^\d+\. (.+)$/gm, '<li style="margin:3px 0;padding-left:4px;list-style:decimal;">$1</li>');
-    t = t.replace(/\n\n/g, '<br><br>');
-    t = t.replace(/\n/g, '<br>');
+    t = t.replace(/\n\n/g, '<br>');
+    t = t.replace(/\n/g, ' ');
     return t;
   }
 
